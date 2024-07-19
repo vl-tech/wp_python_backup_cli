@@ -14,7 +14,7 @@ from collections import OrderedDict
 _date = datetime.today()
 current_date = _date.strftime("%d-%m-%Y")
 port = 12545
-# pw = '*Ikmx9j&V%8(%hGBsNb'
+
 
 # (self.password,self.wordpress_path,self.username,self.domain_name)
 parser = argparse.ArgumentParser(prog='WordPress Backup tools',description='Backing up WP Remote via SSH Paramiko')
