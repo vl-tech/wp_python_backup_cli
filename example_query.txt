@@ -1,1 +1,0 @@
-/wp_backup.py --action restore -u vladmint -d python.vladmin.top -P /home/vladmint/python.vladmin.top -H 185.199.38.18
