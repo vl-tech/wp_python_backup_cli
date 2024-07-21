@@ -3,7 +3,6 @@ from paramiko import SSHClient
 import paramiko
 import  sys
 import argparse
-import os
 from datetime import datetime
 import time
 from pprint import pprint
@@ -14,7 +13,6 @@ from collections import OrderedDict
 _date = datetime.today()
 current_date = _date.strftime("%d-%m-%Y")
 port = 12545
-
 
 # (self.password,self.wordpress_path,self.username,self.domain_name)
 parser = argparse.ArgumentParser(prog='WordPress Backup tools',description='Backing up WP Remote via SSH Paramiko')
@@ -29,7 +27,7 @@ parser.add_argument('-H','--host',action="store",help='-H hostname for cPanel')
 
 parser.add_argument('--action',choices=['backup','restore','add_website','delete_website','list_website','all_sites',
                                         'check','restore2','list_website2','backup2'],default='check')
-argcomplete.autocomplete(parser)
+#argcomplete.autocomplete(parser)
 
 args = parser.parse_args()
 
@@ -97,7 +95,7 @@ class WordPressBackup:
         self.wordpress_path = args.path
         self.domain_name = args.domain
         self.backup_folder =  f'{self.domain_name}_backup_folder_{current_date}'
-        self.backup_tar_file = f"{self.backup_folder}/{self.domain_name}-backup{current_date}.tar.gz"
+        self.backup_tar_file = f"{self.backup_folder}/{self.domain_name}-backup-{current_date}.tar.gz"
         self.database_backup_file = f"{self.backup_folder}/{self.domain_name}-backup-{current_date}.sql"
         
     def connect_to_host(self):
@@ -108,14 +106,12 @@ class WordPressBackup:
         return f"Connection to {self.hostname} Was SuccessFull",client
         
         
-        
-        
     def create_backup(self):
         client = SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         client.connect(self.hostname,port,self.username, self.password)
         client.exec_command(f'mkdir {self.backup_folder}')
-        time.sleep(2)
+        
         print("#"*50)
         print('Backup Folder successfull created ')
         print("#"*50)
@@ -178,20 +174,42 @@ class WordPressBackup:
             return "End of script. Rerun the script to generate or restore a backup"
         # return "Backup Was restored",stderr.read().decode('utf-8')
         
-        
-        
+        #########################################################
+        ##########################################################
+        ########             RESTORE BACKUP    ###################
+        ##########################################################
+        ##########################################################
         
     def restore_backup(self,):
         client = SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         client.connect(self.hostname,port,self.username, self.password)
+        
+        
+        delete_not_wp_content = client.exec_command(f"cd {self.wordpress_path}&&find . -mindepth 1 -maxdepth 1 ! -name 'wp-content' -delete")
+        stdin,stdout,stderr = delete_not_wp_content
+        print(f'Deleting files and folders from {self.wordpress_path}without wp-content')
+        
+        print()
+        print(stdout.read().decode('utf-8'))
+        stdin.close()
+        print("DELETE FILES AND FOLDERS FROM wp-content withot uploads")
+        
+        delete_not_uploads = client.exec_command(f"cd {self.wordpress_path}/wp-content/&&find . -mindepth 1 -maxdepth 1 ! -name 'uploads' -delete")
+        i,o,e = delete_not_uploads
+        i.close()
+        print(o.read().decode('utf-8'))
+        
+        print(f"Exporting the files from {self.backup_tar_file} to {self.wordpress_path}")
+               # restore_command = client.exec_command(f'tar -xzf {self.backup_tar_file} -C {self.wordpress_path}')
+        # #delete_current_content = client.exec_command(f'rm -rf {self.wordpress_path}/*')
+        # delete_current_content = client.exec_command(f"find {self.wordpress_path}/* -mindepth 1 -maxdepth 1 ! -name 'uploads' -exec rm -rf {{}} \;")
+        # i,o,e = delete_current_content
+        # print(f'Deleting files and folders inside WP DIR {self.wordpress_path}')
+        # print(o.read().decode('utf-8'))
+        # print(e.read().decode('utf-8'))
         print(f"Exporting the files from {self.backup_tar_file} to {self.wordpress_path}")
         restore_command = client.exec_command(f'tar -xzf {self.backup_tar_file} -C {self.wordpress_path}')
-        delete_current_content = client.exec_command(f'rm -rf {self.wordpress_path}/*')
-        i,o,e = delete_current_content
-        print(f'Deleting files and folders inside WP DIR {self.wordpress_path}')
-        print(o.read().decode('utf-8'))
-        print(e.read().decode('utf-8'))
         stdin ,stdout, stderr = restore_command
         print(stdout.read().decode('utf-8'))
         print("#"*50)
@@ -216,7 +234,7 @@ class BackupFromDatabase:
         self.wordpress_path = wordpress_path
         self.domain_name = domain_name
         self.backup_folder =  f'{self.domain_name}_backup_folder_{current_date}'
-        self.backup_tar_file = f"{self.backup_folder}/{self.domain_name}-backup{current_date}.tar.gz"
+        self.backup_tar_file = f"{self.backup_folder}/{self.domain_name}-backup-{current_date}.tar.gz"
         self.database_backup_file = f"{self.backup_folder}/{self.domain_name}-backup-{current_date}.sql"
         
 
@@ -264,17 +282,43 @@ class BackupFromDatabase:
                 "Folder":f"Backup Folder Created {self.backup_folder}"
             } ,sys.exit('End of Program! Bye Bye')
         
+        
+        
+         #########################################################
+        ##########################################################
+        ########             RESTORE BACKUP    ###################
+        ##########################################################
+        ##########################################################
+        
     def restore_backup(self):
+        
         client = SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         client.connect(self.hostname,port,self.username, self.password)
+       
+        #delete_current_content = client.exec_command(f'rm -rf {self.wordpress_path}/*')
+        
+        delete_not_wp_content = client.exec_command(f"cd {self.wordpress_path}&&find . -mindepth 1 -maxdepth 1 ! -name 'wp-content' -delete")
+        stdin,stdout,stderr = delete_not_wp_content
+        print(f'Deleting files and folders from {self.wordpress_path}without wp-content')
+        
+        print()
+        print(stdout.read().decode('utf-8'))
+        stdin.close()
+        print("DELETE FILES AND FOLDERS FROM wp-content withot uploads")
+        
+        delete_not_uploads = client.exec_command(f"cd {self.wordpress_path}/wp-content/&&find . -mindepth 1 -maxdepth 1 ! -name 'uploads' -delete")
+        i,o,e = delete_not_uploads
+        i.close()
+        print(o.read().decode('utf-8'))
+    
+        #delete_current_content = client.exec_command(f"cd {self.wordpress_path}&&find . -mindepth 1 -maxdepth 1 ! -name 'wp-content' -delete && cd {self.wordpress_path}/wp-content&&find . -mindepth 1 -maxdepth 1 -name 'uploads' -delete")
+        # i,o,e = delete_current_content
+        # print(f'Deleting files and folders inside WP DIR {self.wordpress_path}')
+        # print(o.read().decode('utf-8'))
+        # print(e.read().decode('utf-8'))
         print(f"Exporting the files from {self.backup_tar_file} to {self.wordpress_path}")
         restore_command = client.exec_command(f"tar  -xzf {self.backup_tar_file} -C {self.wordpress_path}")
-        delete_current_content = client.exec_command(f'rm -rf {self.wordpress_path}/*')
-        i,o,e = delete_current_content
-        print(f'Deleting files and folders inside WP DIR {self.wordpress_path}')
-        print(o.read().decode('utf-8'))
-        print(e.read().decode('utf-8'))
         stdin ,stdout, stderr = restore_command
         print(stdout.read().decode('utf-8'))
         print("#"*50)
