@@ -14,6 +14,19 @@ _date = datetime.today()
 current_date = _date.strftime("%d-%m-%Y")
 port = 12545
 
+
+
+def usage_function():
+    print("#"*50)
+    print()
+    print('EXAMPLE COMMAND TO ADD WEBSITE TO DATABASE ')
+    print()
+    print("./wp_backup.py --action add_website -u cPanel UserName -d python.vladmin.top -P wordpress-folder-path (Without back slash/ example.com or /home/user/example.com) -p 'PASSOWRD' ( Always in single quotes to prevent parameter expansion! ) -H HOST/IP ")
+    print()
+    print("#"*50)
+    
+usage_function()    
+
 # (self.password,self.wordpress_path,self.username,self.domain_name)
 parser = argparse.ArgumentParser(prog='WordPress Backup tools',description='Backing up WP Remote via SSH Paramiko')
 
@@ -35,6 +48,12 @@ exclude_path = ("./wp-content/uploads")
 
 # class WpDatabase():
 connection = sqlite3.connect(database='wordpress_support.db')
+
+    #########################################################
+    #########################################################
+    ########     DATABASE INITIATION INSERT   ##############
+    #########################################################
+    #########################################################
 class WpDatabase:
     def __init__(self,domain_name,username,password,hostname,wp_path,backup_folder):
         self.domain_name = domain_name
@@ -43,6 +62,13 @@ class WpDatabase:
         self.hostname = hostname
         self.wp_path = wp_path
         self.backup_folder = backup_folder
+        
+        
+    #########################################################
+    #########################################################
+    ########       ADD WORDPRESS SITE TO DATABASE    ########
+    #########################################################
+    #########################################################   
         
     def add_website(self):
         add_new_website = f"""
@@ -62,6 +88,13 @@ class WpDatabase:
     # The error was sqlite3.OperationalError: no such column: python.vladmin.top
     # EXplicitly MySQL and SQLITe work with quotes for each element
     
+    #########################################################
+    #########################################################
+    ########       DELETE WordPress WEBSITE    ##############
+    #########################################################
+    ######################################################### 
+    
+    
     def delete_wp_site(self):
         delete_website = f"""
         DELETE from wordpress_sites WHERE domain_name='{self.domain_name}';
@@ -69,7 +102,12 @@ class WpDatabase:
         """
         return delete_website
     
+    
+    
+    
     # Lists A awebsites selected on the command line with --action list_website
+    
+    
     def show_site_data(self):
         website_data = f"""
                 SELECT * FROM wordpress_sites WHERE domain_name='{self.domain_name}'
@@ -77,7 +115,8 @@ class WpDatabase:
        
         return website_data   
     
-    # Listing ALL websites that were added to the database             
+    # Listing ALL websites that were added to the database    
+             
     def list_all_websites(self):
         list_website = """
         select * from wordpress_sites;
@@ -98,6 +137,8 @@ class WordPressBackup:
         self.backup_tar_file = f"{self.backup_folder}/{self.domain_name}-backup-{current_date}.tar.gz"
         self.database_backup_file = f"{self.backup_folder}/{self.domain_name}-backup-{current_date}.sql"
         
+        
+    ################ DATABASE CONNECTION FUNCTION ##############    
     def connect_to_host(self):
         client = SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -105,7 +146,10 @@ class WordPressBackup:
         
         return f"Connection to {self.hostname} Was SuccessFull",client
         
-        
+        #########################################################
+        ########            CREATE BACKUP    #############
+        #########################################################
+
     def create_backup(self):
         client = SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -118,7 +162,10 @@ class WordPressBackup:
         print('Starting Creation of Database backup and Files Backup ')
         print("#"*50)
         print("...")
+        
+        
         # RUN COMMAND SSH
+       ############################ Backing up the wordpress database and files ###################
        
         backup_wordpress = client.exec_command(f"wp --path={self.wordpress_path} db export {self.database_backup_file} && tar --exclude='{exclude_path}'-czf  {self.backup_tar_file} -C {self.wordpress_path} .")
         stdin, stdout, stderr = backup_wordpress
@@ -147,6 +194,11 @@ class WordPressBackup:
                 "Folder":f"Backup Folder Created {self.backup_folder}"
             } ,sys.exit('End of Program! Bye Bye')
         
+        #########################################################
+        #########################################################
+        ########             CHECK BACKUP FOLDER    #############
+        #########################################################
+        #########################################################
       
     def check_backup_folder(self):
         client = SSHClient()
@@ -185,7 +237,7 @@ class WordPressBackup:
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         client.connect(self.hostname,port,self.username, self.password)
         
-        
+        ################ DELETING THE WP CONTENT FOLDER ##################
         delete_not_wp_content = client.exec_command(f"cd {self.wordpress_path}&&find . -mindepth 1 -maxdepth 1 ! -name 'wp-content' -delete")
         stdin,stdout,stderr = delete_not_wp_content
         print(f'Deleting files and folders from {self.wordpress_path}without wp-content')
@@ -195,31 +247,35 @@ class WordPressBackup:
         stdin.close()
         print("DELETE FILES AND FOLDERS FROM wp-content withot uploads")
         
+        ################ DELETING THE UPLOADS FOLDER ##################
+        
         delete_not_uploads = client.exec_command(f"cd {self.wordpress_path}/wp-content/&&find . -mindepth 1 -maxdepth 1 ! -name 'uploads' -delete")
         i,o,e = delete_not_uploads
         i.close()
         print(o.read().decode('utf-8'))
         
         print(f"Exporting the files from {self.backup_tar_file} to {self.wordpress_path}")
-               # restore_command = client.exec_command(f'tar -xzf {self.backup_tar_file} -C {self.wordpress_path}')
-        # #delete_current_content = client.exec_command(f'rm -rf {self.wordpress_path}/*')
-        # delete_current_content = client.exec_command(f"find {self.wordpress_path}/* -mindepth 1 -maxdepth 1 ! -name 'uploads' -exec rm -rf {{}} \;")
-        # i,o,e = delete_current_content
-        # print(f'Deleting files and folders inside WP DIR {self.wordpress_path}')
-        # print(o.read().decode('utf-8'))
-        # print(e.read().decode('utf-8'))
+
         print(f"Exporting the files from {self.backup_tar_file} to {self.wordpress_path}")
         restore_command = client.exec_command(f'tar -xzf {self.backup_tar_file} -C {self.wordpress_path}')
         stdin ,stdout, stderr = restore_command
+        
+        
         print(stdout.read().decode('utf-8'))
+        
+        
         print("#"*50)
         print('File restore completed! Continuing with database import')
         print("#"*50)
         print(f'Starting Database {self.database_backup_file} import process! ')
         print("#"*50)
         print("#"*50)
+        
+        
         database_restore_command = client.exec_command(f'wp --path={self.wordpress_path} db import {self.database_backup_file}')
         stdin ,stdout, stderr = database_restore_command
+        
+        
         print(stdout.read().decode('utf-8'))
         print("#"*50)
         print()
@@ -237,6 +293,12 @@ class BackupFromDatabase:
         self.backup_tar_file = f"{self.backup_folder}/{self.domain_name}-backup-{current_date}.tar.gz"
         self.database_backup_file = f"{self.backup_folder}/{self.domain_name}-backup-{current_date}.sql"
         
+
+        ##########################################################
+        ##########################################################
+        ########            CREATE BACKUP    #####################
+        ##########################################################
+        ##########################################################
 
     def do_backup(self):
         
@@ -284,7 +346,7 @@ class BackupFromDatabase:
         
         
         
-         #########################################################
+        ##########################################################
         ##########################################################
         ########             RESTORE BACKUP    ###################
         ##########################################################
@@ -311,22 +373,21 @@ class BackupFromDatabase:
         i,o,e = delete_not_uploads
         i.close()
         print(o.read().decode('utf-8'))
-    
-        #delete_current_content = client.exec_command(f"cd {self.wordpress_path}&&find . -mindepth 1 -maxdepth 1 ! -name 'wp-content' -delete && cd {self.wordpress_path}/wp-content&&find . -mindepth 1 -maxdepth 1 -name 'uploads' -delete")
-        # i,o,e = delete_current_content
-        # print(f'Deleting files and folders inside WP DIR {self.wordpress_path}')
-        # print(o.read().decode('utf-8'))
-        # print(e.read().decode('utf-8'))
+        ########################### EXPORTING THE FILES FROM THE BACKUP ##################
         print(f"Exporting the files from {self.backup_tar_file} to {self.wordpress_path}")
         restore_command = client.exec_command(f"tar  -xzf {self.backup_tar_file} -C {self.wordpress_path}")
         stdin ,stdout, stderr = restore_command
         print(stdout.read().decode('utf-8'))
+        
+        
         print("#"*50)
         print('File restore completed! Continuing with database import')
         print("#"*50)
+        
         print(f'Starting Database {self.database_backup_file} import process! ')
         print("#"*50)
         print("#"*50)
+        
         database_restore_command = client.exec_command(f'wp --path={self.wordpress_path} db import {self.database_backup_file}')
         stdin ,stdout, stderr = database_restore_command
         print(stdout.read().decode('utf-8'))
@@ -421,17 +482,10 @@ if __name__ == "__main__":
         wordpress_path = db_site_data[0][5]
         backup_instance = BackupFromDatabase(user,password,hostname,wordpress_path,domain_name)
         print(backup_instance.restore_backup())
-    # elif args.action == "list_website":
-    #     cursor.execute(db_instance.show_site_data())
-    #     site_data = cursor.fetchall()
-    #     # db_data = BackupFromDatabase(user,password,hostname,wordpress_path)
-    #     # cursor.execute(db_data.fetch_variables())
-        
-        
-        
     else:
+        usage_function()
         print(main_backup.check_backup_folder())
-    #from_db_restore','from_db_list','from_db_backup'
+  
     
     
     
