@@ -40,7 +40,7 @@ parser.add_argument('-H','--host',action="store",help='-H hostname for cPanel')
 
 parser.add_argument('--action',choices=['backup','restore','add_website','delete_website','list_website','all_sites',
                                         'check','restore2','list_website2','backup2'],default='check')
-#argcomplete.autocomplete(parser)
+argcomplete.autocomplete(parser)
 
 args = parser.parse_args()
 
