@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 from paramiko import SSHClient
 import paramiko
-import  sys
+import sys
 import argparse
 from datetime import datetime
 import time
-from pprint import pprint
 import sqlite3
 import argcomplete
 from pprint import pprint
@@ -15,31 +14,33 @@ current_date = _date.strftime("%d-%m-%Y")
 port = 12345
 
 
-
 def usage_function():
     print("#"*50)
     print()
     print('EXAMPLE COMMAND TO ADD WEBSITE TO DATABASE ')
     print()
-    print("./wp_backup.py --action add_website -u cPanel UserName -d python.vladmin.top -P wordpress-folder-path (Without back slash/ example.com or /home/user/example.com) -p 'PASSOWRD' ( Always in single quotes to prevent parameter expansion! ) -H HOST/IP ")
+    print("./wp_backup.py --action add_website -u  SSH_UserName -d website_name.com -P wordpress-folder-path "
+          "(Without back slash/ example.com or /home/user/example.com) -p 'PASSWORD' "
+          "( Always in single quotes to prevent parameter expansion! ) -H HOST/IP ")
     print()
     print("#"*50)
     
-usage_function()    
+
+usage_function()
 
 # (self.password,self.wordpress_path,self.username,self.domain_name)
-parser = argparse.ArgumentParser(prog='WordPress Backup tools',description='Backing up WP Remote via SSH Paramiko')
+parser = argparse.ArgumentParser(prog='WordPress Backup tools', description='Backing up WP Remote via SSH Paramiko')
 
-parser.add_argument('-u','--user',action='store',help='-u username of cPanel')
-parser.add_argument('-p','--password',action="store",help='-p add password for cPanel')
-parser.add_argument('-d','--domain',action="store",help='-d domain for cPanel')
-parser.add_argument('-P','--path',action="store",help='-P domain path for cPanel')
-parser.add_argument('-H','--host',action="store",help='-H hostname for cPanel')
+parser.add_argument('-u', '--user', action='store', help='-u username of cPanel')
+parser.add_argument('-p', '--password', action="store", help='-p add password for cPanel')
+parser.add_argument('-d', '--domain', action="store", help='-d domain for cPanel')
+parser.add_argument('-P', '--path', action="store", help='-P domain path for cPanel')
+parser.add_argument('-H', '--host', action="store", help='-H hostname for cPanel')
 # parser.add_argument('-R','--restore',action="store",help='-R Restore Added Wordpress Site From database')
 # parser.add_argument('-D','--wp_site',action='store',help='-D/--wp-site Provider domain argument <domain>/<wp_sute>')
 
-parser.add_argument('--action',choices=['backup','restore','add_website','delete_website','list_website','all_sites',
-                                        'check','restore2','list_website2','backup2'],default='check')
+parser.add_argument('--action', choices=['backup', 'restore', 'add_website', 'delete_website', 'list_website',
+                                         'all_sites', 'check', 'restore2', 'list_website2', 'backup2'], default='check')
 argcomplete.autocomplete(parser)
 
 args = parser.parse_args()
@@ -49,11 +50,14 @@ exclude_path = ("./wp-content/uploads")
 # class WpDatabase():
 connection = sqlite3.connect(database='wordpress_support.db')
 
-    #########################################################
-    #########################################################
-    ########     DATABASE INITIATION INSERT   ##############
-    #########################################################
-    #########################################################
+
+#########################################################
+#########################################################
+######## DATABASE INITIATION INSERT   ##############
+#########################################################
+#########################################################
+
+
 class WpDatabase:
     def __init__(self,domain_name,username,password,hostname,wp_path,backup_folder):
         self.domain_name = domain_name
@@ -68,8 +72,8 @@ class WpDatabase:
     #########################################################
     ########       ADD WORDPRESS SITE TO DATABASE    ########
     #########################################################
-    #########################################################   
-        
+    #########################################################
+    
     def add_website(self):
         add_new_website = f"""
         INSERT INTO wordpress_sites(domain_name,username,password,hostname,wp_path,backup_folder)
@@ -80,7 +84,7 @@ class WpDatabase:
         '{self.wp_path}',
         '{self.backup_folder}')
 
-        """ 
+        """
         return  add_new_website
 
 
@@ -92,7 +96,7 @@ class WpDatabase:
     #########################################################
     ########       DELETE WordPress WEBSITE    ##############
     #########################################################
-    ######################################################### 
+    #########################################################
     
     
     def delete_wp_site(self):
@@ -113,10 +117,10 @@ class WpDatabase:
                 SELECT * FROM wordpress_sites WHERE domain_name='{self.domain_name}'
         """
        
-        return website_data   
+        return website_data
     
-    # Listing ALL websites that were added to the database    
-             
+    # Listing ALL websites that were added to the database
+    
     def list_all_websites(self):
         list_website = """
         select * from wordpress_sites;
@@ -138,7 +142,7 @@ class WordPressBackup:
         self.database_backup_file = f"{self.backup_folder}/{self.domain_name}-backup-{current_date}.sql"
         
         
-    ################ DATABASE CONNECTION FUNCTION ##############    
+    ################ DATABASE CONNECTION FUNCTION ##############
     def connect_to_host(self):
         client = SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -217,7 +221,7 @@ class WordPressBackup:
             print()
             print("Backup Folder Already Exists:")
             print(f"############## {self.backup_folder} ############## ")
-            print()      
+            print()
             print('Listing Backup folder content')
             print(f'{output}')
             print("#"*50)
@@ -401,7 +405,7 @@ if __name__ == "__main__":
     # Secibd ubstance for utilizing the databases with the main class Variables
     db_variables = WordPressBackup()
     # db_instance Registers the website data into the database
-    db_instance = WpDatabase(db_variables.domain_name,db_variables.username,db_variables.password,db_variables.hostname,db_variables.wordpress_path,db_variables.backup_folder)
+    db_instance = WpDatabase(db_variables.domain_name, db_variables.username, db_variables.password, db_variables.hostname, db_variables.wordpress_path, db_variables.backup_folder)
     # Creating the Database cursor object
     cursor = connection.cursor()
     
@@ -456,10 +460,10 @@ if __name__ == "__main__":
         wordpress_path = db_site_data[0][5]
         
         print(f"Domain Name: {domain_name}")
-        print(f"cPanel Username: {user}")
+        print(f"SSH Username: {user}")
         print(f"IP: {hostname}")
         print(f"Path to WP installation: {wordpress_path}")
-        print(f"cPanel Password: {password}")
+        print(f"SSH Password: {password}")
         
     elif args.action == "backup2":
         cursor.execute(db_instance.show_site_data())
@@ -469,7 +473,7 @@ if __name__ == "__main__":
         password = db_site_data[0][3]
         hostname = db_site_data[0][4]
         wordpress_path = db_site_data[0][5]
-        backup_instance = BackupFromDatabase(user,password,hostname,wordpress_path,domain_name)
+        backup_instance = BackupFromDatabase(user, password, hostname, wordpress_path, domain_name)
         print(backup_instance.do_backup())
         
     elif args.action == 'restore2':
@@ -480,7 +484,7 @@ if __name__ == "__main__":
         password = db_site_data[0][3]
         hostname = db_site_data[0][4]
         wordpress_path = db_site_data[0][5]
-        backup_instance = BackupFromDatabase(user,password,hostname,wordpress_path,domain_name)
+        backup_instance = BackupFromDatabase(user, password, hostname, wordpress_path, domain_name)
         print(backup_instance.restore_backup())
     else:
         usage_function()
