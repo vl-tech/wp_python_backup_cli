@@ -151,3 +151,27 @@ OrderedDict([('domain_name', 'example_website.com'),
 ```
 
 
+## Install completion for the Python Script
+
+```ruby
+sudo pip install 'argcomplete>=0.5.7'
+```
+
+# For global activation of all argcomplete enabled python applications run:
+
+
+```ruby
+sudo activate-global-python-argcomplete
+```
+
+# For permanent (but not global)`pytest`activation, use:
+
+```ruby
+register-python-argcomplete pytest >> ~/.bashrc
+```
+
+# For one-time activation of argcomplete for`pytest`only, use:
+
+```ruby
+eval "$(register-python-argcomplete pytest)"
+```
