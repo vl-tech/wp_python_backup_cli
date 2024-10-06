@@ -31,11 +31,11 @@ usage_function()
 # (self.password,self.wordpress_path,self.username,self.domain_name)
 parser = argparse.ArgumentParser(prog='WordPress Backup tools', description='Backing up WP Remote via SSH Paramiko')
 
-parser.add_argument('-u', '--user', action='store', help='-u username of cPanel')
-parser.add_argument('-p', '--password', action="store", help='-p add password for cPanel')
-parser.add_argument('-d', '--domain', action="store", help='-d domain for cPanel')
-parser.add_argument('-P', '--path', action="store", help='-P domain path for cPanel')
-parser.add_argument('-H', '--host', action="store", help='-H hostname for cPanel')
+parser.add_argument('-u', '--user', action='store', help='-u username of SSH')
+parser.add_argument('-p', '--password', action="store", help='-p add password for SSH')
+parser.add_argument('-d', '--domain', action="store", help='-d domain name')
+parser.add_argument('-P', '--path', action="store", help='-P domain folder path')
+parser.add_argument('-H', '--host', action="store", help='-H hostname for SSH')
 # parser.add_argument('-R','--restore',action="store",help='-R Restore Added Wordpress Site From database')
 # parser.add_argument('-D','--wp_site',action='store',help='-D/--wp-site Provider domain argument <domain>/<wp_sute>')
 
@@ -89,8 +89,8 @@ class WpDatabase:
 
 
     # Key issue with deleting a website was to set the variable in single quotes. Otherwise error was present:
-    # The error was sqlite3.OperationalError: no such column: python.vladmin.top
-    # EXplicitly MySQL and SQLITe work with quotes for each element
+    # The error was sqlite3.OperationalError: no such column: website_name.com
+    # Explicitly MySQL and Sqlite3 works with quotes for each element
     
     #########################################################
     #########################################################

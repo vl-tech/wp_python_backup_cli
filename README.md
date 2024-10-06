@@ -17,7 +17,7 @@
 
 EXAMPLE COMMAND TO ADD WEBSITE TO DATABASE
 
-./wp_backup.py --action add_website -u cPanel UserName -d python.vladmin.top -P wordpress-folder-path (Without back slash/ example.com or /home/user/example.com) -p 'PASSWORD' ( Always in single quotes to prevent parameter expansion! ) -H HOST/IP
+./wp_backup.py --action add_website -u SSH_UserName -d website_name.com -P wordpress-folder-path (Without back slash/ website_name.com or /home/user/website_name.com) -p 'PASSWORD' ( Always in single quotes to prevent parameter expansion! ) -H HOST/IP
 
 ##################################################
 usage: WordPress Backup tools [-h] [-u USER] [-p PASSWORD] [-d DOMAIN] [-P PATH] [-H HOST]
@@ -27,13 +27,13 @@ Backing up WP Remote via SSH Paramiko
 
 options:
   -h, --help            show this help message and exit
-  -u USER, --user USER  -u username of cPanel
+  -u USER, --user USER  -u username of SSH
   -p PASSWORD, --password PASSWORD
-                        -p add password for cPanel
+                        -p add password for SSH
   -d DOMAIN, --domain DOMAIN
-                        -d domain for cPanel
-  -P PATH, --path PATH  -P domain path for cPanel
-  -H HOST, --host HOST  -H hostname for cPanel
+                        -d domain for SSH
+  -P PATH, --path PATH  -P domain path for SSH
+  -H HOST, --host HOST  -H hostname for SSH
   --action {backup,restore,add_website,delete_website,list_website,all_sites,check,restore2,list_website2,backup2}
 
 ```
