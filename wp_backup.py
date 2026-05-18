@@ -25,6 +25,7 @@ def parse_args():
     parser.add_argument('-d', '--domain', help='Domain name')
     parser.add_argument('-P', '--path', help='WordPress installation path (no trailing slash)')
     parser.add_argument('-H', '--host', help='Hostname or IP')
+    parser.add_argument('-i', '--id', type=int, help='Site ID (for delete_website)')
     parser.add_argument('--port', type=int, default=12345, help='SSH port (default: 12345)')
     parser.add_argument('--trust-host', action='store_true',
                         help='Auto-accept unknown host keys (insecure, use only on trusted networks)')
@@ -71,7 +72,7 @@ class WpDatabase:
     def _init_table(self):
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS wordpress_sites (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                wp_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 domain_name TEXT UNIQUE,
                 username TEXT,
                 password TEXT,
@@ -90,12 +91,15 @@ class WpDatabase:
         )
         self.connection.commit()
 
-    def delete_website(self, domain_name):
-        self.cursor.execute(
-            "DELETE FROM wordpress_sites WHERE domain_name = ?",
-            (domain_name,)
-        )
+    def delete_website(self, domain_name=None, site_id=None):
+        if site_id is not None:
+            self.cursor.execute("DELETE FROM wordpress_sites WHERE wp_id = ?", (site_id,))
+        elif domain_name is not None:
+            self.cursor.execute("DELETE FROM wordpress_sites WHERE domain_name = ?", (domain_name,))
+        else:
+            raise ValueError("delete_website requires domain_name or site_id")
         self.connection.commit()
+        return self.cursor.rowcount
 
     def get_site(self, domain_name):
         self.cursor.execute(
@@ -244,9 +248,16 @@ def main():
             print("Run with --action list_website -d DOMAIN to verify.")
 
         elif args.action == 'delete_website':
-            _require_args(args, 'domain')
-            db.delete_website(args.domain)
-            print(f"Website {args.domain} deleted.")
+            if not args.id and not args.domain:
+                print("Error: delete_website requires -d DOMAIN or -i ID", file=sys.stderr)
+                sys.exit(1)
+            deleted = db.delete_website(domain_name=args.domain, site_id=args.id)
+            if deleted:
+                label = f"ID {args.id}" if args.id else args.domain
+                print(f"Website {label} deleted.")
+            else:
+                label = f"ID {args.id}" if args.id else args.domain
+                print(f"No site found for {label}.")
 
         elif args.action == 'list_website':
             _require_args(args, 'domain')
@@ -254,7 +265,7 @@ def main():
             if not row:
                 print(f"No site found for domain: {args.domain}")
             else:
-                cols = ['id', 'domain_name', 'username', 'password', 'hostname', 'wp_path', 'backup_folder']
+                cols = ['wp_id', 'domain_name', 'username', 'password', 'hostname', 'wp_path', 'backup_folder']
                 pprint(OrderedDict(zip(cols, row)))
 
         elif args.action == 'all_sites':
