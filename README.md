@@ -1,279 +1,206 @@
-# Remote WordPress Backup tool
+# Remote WordPress Backup Tool
 
-- The tool uses Paramiko SSH module of python to connect to the remote machine.
-- Along with that it has Sqlite3 module that stores the data for Host , username , password and WP path
-- It takes those details and connects to the remote host and creates a backup of the wordpress files and database.
-- In order to work . The remote server must have SSH enabled + password authentication
-- Port is hardcoded into the script for this version of the tool.
-- WP database backup requires wp-cli to be installed on the server for the user that we are connecting with.
-- mysqldump can be embedded as an option later on , but for now It uses just wp-cli
+- Uses Paramiko SSH module to connect to the remote machine.
+- Uses SQLite3 to store site credentials (hostname, username, password, WP path).
+- Connects via SSH and creates a backup of WordPress files and database.
+- Remote server must have SSH + password authentication enabled.
+- WP database backup requires **wp-cli** installed on the remote server for the connecting user.
 
-# NB!!! The script does not backup wp-content/uploads folder to reduce backup and restore times
+> **Note:** `wp-content/uploads` is excluded from backups to reduce backup and restore times.
+> Keep a separate backup of your uploads folder.
 
-## Remember to not delete anything from your uploads folder or have a separate backup for it
+---
 
-## The tool supports Backup and Restores of currently created backup
+## Installation
 
-## Arguments/Legend
+Installs dependencies via `apt` (Ubuntu/Debian):
 
 ```bash
-/wp_backup.py -h
-##################################################
+make install
+```
 
-EXAMPLE COMMAND TO ADD WEBSITE TO DATABASE
+To also set up shell autocomplete interactively:
 
-./wp_backup.py --action add_website -u SSH_UserName -d website_name.com -P wordpress-folder-path (Without back slash/ website_name.com or /home/user/website_name.com) -p 'PASSWORD' ( Always in single quotes to prevent parameter expansion! ) -H HOST/IP
+```bash
+make all
+# or separately:
+make autocomplete
+```
 
-##################################################
-usage: WordPress Backup tools [-h] [-u USER] [-p PASSWORD] [-d DOMAIN] [-P PATH] [-H HOST]
-                              [--action {backup,restore,add_website,delete_website,list_website,all_sites,check,restore2,list_website2,backup2}]
+---
 
-Backing up WP Remote via SSH Paramiko
+## Arguments
+
+```
+usage: WordPress Backup Tools [-h] [-u USER] [-p PASSWORD] [-d DOMAIN]
+                              [-P PATH] [-H HOST] [-i ID] [--port PORT]
+                              [--trust-host]
+                              [--action {backup,restore,add_website,
+                                         delete_website,list_website,
+                                         all_sites,check,
+                                         backup_db,restore_db,list_website_db}]
 
 options:
   -h, --help            show this help message and exit
-  -u USER, --user USER  -u username of SSH
+  -u USER, --user USER  SSH username
   -p PASSWORD, --password PASSWORD
-                        -p add password for SSH
+                        SSH password (use single quotes)
   -d DOMAIN, --domain DOMAIN
-                        -d domain for SSH
-  -P PATH, --path PATH  -P domain path for SSH
-  -H HOST, --host HOST  -H hostname for SSH
-  --action {backup,restore,add_website,delete_website,list_website,all_sites,check,restore2,list_website2,backup2}
-
+                        Domain name
+  -P PATH, --path PATH  WordPress installation path (no trailing slash)
+  -H HOST, --host HOST  Hostname or IP
+  -i ID, --id ID        Site ID — use with delete_website to delete by ID
+  --port PORT           SSH port (default: 12345)
+  --trust-host          Auto-accept unknown host keys (insecure, trusted networks only)
+  --action              See actions below
 ```
 
-- The tool is designed initial to utilize cPanel+SSH Password authentication and cpanel folder structure
-- It will work for any SSH available connection server that it has wp-cli and a wordpress website
+---
 
-## Example commands
+## Actions & Examples
 
-1. Add Website to the database file
+### 1. Add a website to the database
 
 ```bash
-./wp_backup.py --action add_website -u SSH_USERNAME -p 'PASSWORD' -H IP/Hostname -d domain_name -P WP_PATH 
+./wp_backup.py --action add_website -u SSH_USERNAME -p 'PASSWORD' -H IP/Hostname -d domain_name -P /home/user/domain_name
 ```
 
-2.Delete a Website and its credentials from the database
+> Always wrap the password in single quotes to prevent shell expansion.
+
+---
+
+### 2. Delete a website from the database
+
+By domain name:
 
 ```bash
-./wp_backup.py --action delete_website -d website_name/domain_name
-
+./wp_backup.py --action delete_website -d domain_name.com
 ```
 
-3.Version one --action backup option
-
-- It takes all arguments from the command line and does not add the site to the database
-- Example
+By site ID (use `all_sites` to find the ID):
 
 ```bash
-/wp_backup.py --action backup -u SSH_USERNAME -p 'PASSWORD' -d domain_name/websitename -P /home/path/to/wp -H IP/Hostname
-
+./wp_backup.py --action delete_website -i 3
 ```
 
-4.Restore option is the same --action restore
+---
+
+### 3. List a specific site
 
 ```bash
-/wp_backup.py --action restore -u SSH_USERNAME -p 'PASSWORD' -d domain_name/websitename -P /home/path/to/wp -H IP/Hostname
-
+./wp_backup.py --action list_website -d domain_name.com
 ```
 
-5.Default no argument action is to check whether there is a backup folder and a backup from today. It does not support backups for older dates
+Output:
 
-- It will throw paramiko.ssh_exception.NoValidConnectionsError and display the usage
-
-```bash
-./wp_backup.py
-
-./wp_backup.py --action add_website -u ssh_UserName -d website_name.com 
--P wordpress-folder-path 
-(Without back slash/ example.com or /home/user/example.com) 
--p 'PASSWORD' ( Always in single quotes to prevent parameter expansion! ) -H HOST/IP
+```
+OrderedDict([('wp_id', 3),
+             ('domain_name', 'domain_name.com'),
+             ('username', 'ssh_user'),
+             ('password', 'SOME PASS'),
+             ('hostname', '192.168.1.2'),
+             ('wp_path', '/home/ssh_user/domain_name.com'),
+             ('backup_folder', 'domain_name.com_backup_folder_30-09-2024')])
 ```
 
-6.List a specific website name or all sites
+---
+
+### 4. List all sites
 
 ```bash
 ./wp_backup.py --action all_sites
-
-(6, 'None', 'vl-tech', 'SOME PASS', '192.168.1.2', '/home/wp_site', 'None_backup_folder_30-09-2024')
-
 ```
 
-- If you forget to add -d domain name you can delete it with the same command but with delete option
+Output:
+
+```
+(3, 'domain_name.com', 'ssh_user', 'SOME PASS', '192.168.1.2', '/home/ssh_user/domain_name.com', 'domain_name.com_backup_folder_30-09-2024')
+```
+
+---
+
+### 5. Backup (credentials from CLI)
 
 ```bash
-./wp_backup.py --action delete_website -u vl-tech -H 192.168.1.2 -p 'SOME PASS' -P /home/wp_site
-
+./wp_backup.py --action backup -u SSH_USERNAME -p 'PASSWORD' -d domain_name.com -P /home/user/domain_name.com -H IP/Hostname
 ```
 
-- Correct command template
+---
+
+### 6. Restore (credentials from CLI)
 
 ```bash
-./wp_backup.py --action add_website -u vl-tech -H 192.168.1.2 -p 'SOME PASS' -P /home/wp_site -d example_website.com
-
+./wp_backup.py --action restore -u SSH_USERNAME -p 'PASSWORD' -d domain_name.com -P /home/user/domain_name.com -H IP/Hostname
 ```
 
-- Showing the website details from the database
+---
+
+### 7. Backup using stored database credentials
 
 ```bash
-./wp_backup.py --action list_website2 -d example_website.com
-##################################################
-
-EXAMPLE COMMAND TO ADD WEBSITE TO DATABASE
-
-./wp_backup.py --action add_website -u ssh_UserName -d website_name.com -P wordpress-folder-path (Without back slash/ example.com or /home/user/example.com) -p 'PASSWORD' ( Always in single quotes to prevent parameter expansion! ) -H HOST/IP
-
-##################################################
-Domain Name: example_website.com
-SSH Username: vl-tech
-IP: 192.168.1.2
-Path to WP installation: /home/wp_site
-SSH Password: SOME PASS
-
+./wp_backup.py --action backup_db -d domain_name.com
 ```
 
-- Listing method 1 will fetch data from  the database in  unformatted way
+---
+
+### 8. Restore using stored database credentials
 
 ```bash
-/wp_backup.py --action list_website -d example_website.com
-##################################################
-
-EXAMPLE COMMAND TO ADD WEBSITE TO DATABASE
-
-./wp_backup.py --action add_website -u ssh_UserName -d website_name.com -P wordpress-folder-path (Without back slash/ example.com or /home/user/example.com) -p 'PASSWORD' ( Always in single quotes to prevent parameter expansion! ) -H HOST/IP
-
-##################################################
-OrderedDict([('domain_name', 'example_website.com'),
-             ('username', 'vl-tech'),
-             ('password', 'SOME PASS'),
-             ('hostname', '192.168.1.2'),
-             ('wp_path', '/home/wp_site'),
-             ('backup_folder', 'example_website.com_backup_folder_30-09-2024')])
+./wp_backup.py --action restore_db -d domain_name.com
 ```
 
-## Most viable option is backup2 and restore2
+---
 
-- It takes a website from the database and creates a backup for it
-
-- BACKUP
+### 9. List site details from the database
 
 ```bash
-./wp_backup.py --action backup2 -d example_website.com
+./wp_backup.py --action list_website_db -d domain_name.com
 ```
 
-- RESTORE
+---
+
+### 10. Check backup folder
+
+Checks whether a backup folder exists on the remote server for today's date.
 
 ```bash
- ./wp_backup.py --action restore2 -d example_website.com
+./wp_backup.py --action check -u SSH_USERNAME -p 'PASSWORD' -d domain_name.com -P /home/user/domain_name.com -H IP/Hostname
 ```
 
-## Install completion for the Python Script
+---
 
-```ruby
-sudo pip install 'argcomplete>=0.5.7'
+## Manual Autocomplete Setup
+
+If `make autocomplete` doesn't work for your environment, add this to `~/.bashrc`:
+
+```bash
+register-python-argcomplete wp_backup.py >> ~/.bashrc
+complete -o nospace -o default -o bashdefault -F _python_argcomplete ./wp_backup.py >> ~/.bashrc
 ```
 
-# For global activation of all argcomplete enabled python applications run
+> **Important:** Bash completion is tied to the **exact command string** you type.
+> The two lines above register completion for both `wp_backup.py` and `./wp_backup.py`.
+> If you rename the script, move it to a directory in `$PATH` (e.g. `/usr/local/bin/wp_backup`),
+> or call it by its full path (e.g. `/opt/tools/wp_backup.py`), you must update the
+> `complete` line to match the new name/path — otherwise tab completion will not trigger.
+>
+> Example for a script installed as `/usr/local/bin/wp_backup`:
+> ```bash
+> complete -o nospace -o default -o bashdefault -F _python_argcomplete wp_backup
+> ```
 
-```ruby
+Or for global activation (all argcomplete-enabled scripts — handles any name or path automatically):
+
+```bash
 sudo activate-global-python-argcomplete
 ```
 
-# For permanent (but not global)`pytest`activation, use
-
-```ruby
-register-python-argcomplete pytest >> ~/.bashrc
-```
-
-# For one-time activation of argcomplete for`pytest`only, use
-
-```ruby
-eval "$(register-python-argcomplete pytest)"
-```
-
-## If the above methods do not work just add the below code to your bashrc at the end
-
-```bash
-# enable programmable completion features (you don't need to enable
-# this, if it's already enabled in /etc/bash.bashrc and /etc/profile
-# sources /etc/bash.bashrc).
-#if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
-#    . /etc/bash_completion
-#fi
-
-
-# Run something, muting output or redirecting it to the debug stream
-# depending on the value of _ARC_DEBUG.
-# If ARGCOMPLETE_USE_TEMPFILES is set, use tempfiles for IPC.
-__python_argcomplete_run() {
-    if [[ -z "${ARGCOMPLETE_USE_TEMPFILES-}" ]]; then
-        __python_argcomplete_run_inner "$@"
-        return
-    fi
-    local tmpfile="$(mktemp)"
-    _ARGCOMPLETE_STDOUT_FILENAME="$tmpfile" __python_argcomplete_run_inner "$@"
-    local code=$?
-    cat "$tmpfile"
-    rm "$tmpfile"
-    return $code
-}
-
-__python_argcomplete_run_inner() {
-    if [[ -z "${_ARC_DEBUG-}" ]]; then
-        "$@" 8>&1 9>&2 1>/dev/null 2>&1
-    else
-        "$@" 8>&1 9>&2 1>&9 2>&1
-    fi
-}
-
-_python_argcomplete() {
-    local IFS=$'\013'
-    local SUPPRESS_SPACE=0
-    if compopt +o nospace 2> /dev/null; then
-        SUPPRESS_SPACE=1
-    fi
-    COMPREPLY=( $(IFS="$IFS" \
-                  COMP_LINE="$COMP_LINE" \
-                  COMP_POINT="$COMP_POINT" \
-                  COMP_TYPE="$COMP_TYPE" \
-                  _ARGCOMPLETE_COMP_WORDBREAKS="$COMP_WORDBREAKS" \
-                  _ARGCOMPLETE=1 \
-                  _ARGCOMPLETE_SUPPRESS_SPACE=$SUPPRESS_SPACE \
-                  __python_argcomplete_run "$1") )
-    if [[ $? != 0 ]]; then
-        unset COMPREPLY
-    elif [[ $SUPPRESS_SPACE == 1 ]] && [[ "${COMPREPLY-}" =~ [=/:]$ ]]; then
-        compopt -o nospace
-    fi
-}
-complete -o nospace -o default -o bashdefault -F _python_argcomplete wp_backup.py
-```
-
-## For Centos7 use the same bashrc code but it requires a few more packages to be installed
-
-1. Fix the Repositories
+### CentOS 7
 
 ```bash
 curl -o /etc/yum.repos.d/CentOS-Base.repo https://el7.repo.almalinux.org/centos/CentOS-Base.repo
-
+yum -y update
+yum -y install python3-paramiko python3-argcomplete
 ```
 
-- Using the almalinux repos from the almalinux elevate tutorial
-- <https://wiki.almalinux.org/elevate/ELevating-CentOS7-to-AlmaLinux-9.html#upgrade-centos-7-to-almalinux-8>
-
-2.Update the repos
-
-```bash
-yum -y update  
-```
-
-3.Install argcomplete and virtualenv and upgrade pip
-
-```bash
-yum -y install python3-argcomplete
-
-yum -y install python3-argcomplete
-
-pip3 install --upgrade pip
-```
+Reference: [AlmaLinux ELevate Guide](https://wiki.almalinux.org/elevate/ELevating-CentOS7-to-AlmaLinux-9.html)
