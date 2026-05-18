@@ -1,2 +1,3 @@
 argcomplete==3.4.0
+cryptography
 paramiko==3.4.0
